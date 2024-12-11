@@ -7,7 +7,7 @@ from django.http.response import Http404, JsonResponse
 from django.shortcuts import render
 from django.utils.translation import gettext as _
 
-from .models import Datum, Metric
+from .models import Metric
 from .utils import generation_key
 
 
@@ -17,28 +17,23 @@ def index(request):
 
     data = cache.get(key, version=generation)
     if data is None:
-        metrics = []
-        for MC in Metric.__subclasses__():
-            metrics.extend(
-                MC.objects.filter(show_on_dashboard=True).select_related("category")
-            )
-        metrics = sorted(metrics, key=operator.attrgetter("display_position"))
-
-        metric_latest_querysets = [
-            metric.data.order_by("-timestamp")[0:1] for metric in metrics
-        ]
-        data_latest = Datum.objects.none().union(*metric_latest_querysets)
-        latest_by_metric = {
-            (datum.content_type_id, datum.object_id): datum for datum in data_latest
-        }
-
-        data = []
-        for metric in metrics:
-            latest = latest_by_metric.get((metric.content_type.pk, metric.pk))
-            data.append({"metric": metric, "latest": latest})
+        data = [m for MC in Metric.__subclasses__() for m in MC.objects.for_dashboard()]
+        data.sort(key=operator.attrgetter("display_position"))
         cache.set(key, data, 60 * 60, version=generation)
 
-    return render(request, "dashboard/index.html", {"data": data})
+    # Due to the way `with_latest()` is implemented, the timestamps we get back
+    # are actually strings (because JSON) so they need converting to proper
+    # datetime objects first.
+    timestamps = [
+        datetime.datetime.fromisoformat(m.latest["timestamp"])
+        for m in data
+        if m.latest is not None
+    ]
+    last_updated = max(timestamps, default=None)
+
+    return render(
+        request, "dashboard/index.html", {"data": data, "last_updated": last_updated}
+    )
 
 
 def metric_detail(request, metric_slug):

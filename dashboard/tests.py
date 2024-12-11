@@ -16,6 +16,7 @@ from tracdb.tractime import datetime_to_timestamp
 from .models import (
     METRIC_PERIOD_DAILY,
     METRIC_PERIOD_WEEKLY,
+    Category,
     GithubItemCountMetric,
     GitHubSearchCountMetric,
     Metric,
@@ -33,12 +34,10 @@ class ViewTests(TestCase):
     def test_index(self):
         for MC in Metric.__subclasses__():
             for metric in MC.objects.filter(show_on_dashboard=True):
-                metric.data.create(measurement=44)
                 metric.data.create(measurement=42)
 
         request = self.factory.get(reverse("dashboard-index", host="dashboard"))
-        with self.assertNumQueries(7):
-            response = index(request)
+        response = index(request)
         self.assertContains(response, "Development dashboard")
         self.assertEqual(response.content.count(b'<div class="metric'), 13)
         self.assertEqual(response.content.count(b"42"), 13)
@@ -70,6 +69,53 @@ class ViewTests(TestCase):
         response = metric_json(request, "new-tickets-week")
         self.assertEqual(json.loads(response.content.decode())["data"][0][1], 42)
         self.assertEqual(response.status_code, 200)
+
+
+class AbstractMetricTestCase(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        category = Category.objects.create(name="test category")
+        cls.metrics = [
+            TracTicketMetric.objects.create(
+                slug=f"test{i}", name=f"Test metric {i}", category=category
+            )
+            for i in range(3)
+        ]
+        for metric, measurement, year in [
+            (0, 1, 2020),
+            (0, 2, 2021),
+            (0, 3, 2022),
+            (1, 4, 2023),
+        ]:
+            cls.metrics[metric].data.create(
+                measurement=measurement,
+                timestamp=datetime.datetime(year, 1, 1),
+            )
+
+    def test_with_latest(self):
+        self.assertQuerySetEqual(
+            TracTicketMetric.objects.with_latest().order_by("name"),
+            [
+                (
+                    "Test metric 0",
+                    {"measurement": 3, "timestamp": "2022-01-01T00:00:00-06:00"},
+                ),
+                (
+                    "Test metric 1",
+                    {"measurement": 4, "timestamp": "2023-01-01T00:00:00-06:00"},
+                ),
+                ("Test metric 2", None),
+            ],
+            transform=attrgetter("name", "latest"),
+        )
+
+    def test_for_dashboard(self):
+        with self.assertNumQueries(1):
+            for row in TracTicketMetric.objects.for_dashboard():
+                # weird asserts to make sure the related objects are evaluated
+                self.assertTrue(row.category.name)
+                self.assertTrue(row.latest is None or row.latest["timestamp"])
+                self.assertTrue(row.latest is None or row.latest["measurement"])
 
 
 class MetricMixin:

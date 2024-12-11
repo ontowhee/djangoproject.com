@@ -25,8 +25,7 @@ def index(request):
         metrics = sorted(metrics, key=operator.attrgetter("display_position"))
 
         metric_latest_querysets = [
-            Datum.objects.metrics(metric).order_by("-timestamp")[0:1]
-            for metric in metrics
+            metric.data.order_by("-timestamp")[0:1] for metric in metrics
         ]
         data_latest = Datum.objects.none().union(*metric_latest_querysets)
         latest_by_metric = {

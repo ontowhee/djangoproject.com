@@ -1,8 +1,6 @@
 import ast
 import calendar
 import datetime
-import operator
-from functools import reduce
 
 import requests
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
@@ -254,17 +252,6 @@ class JenkinsFailuresMetric(Metric):
         return self.urljoin(self.jenkins_root_url, "job", self.build_name)
 
 
-class DatumQuerySet(models.QuerySet):
-    def metrics(self, *metrics):
-        """
-        Return only the data from the given metrics.
-        """
-        if not metrics:
-            return self.none()
-        qobjs = [models.Q(content_type=m.content_type, object_id=m.pk) for m in metrics]
-        return self.filter(reduce(operator.or_, qobjs))
-
-
 class Datum(models.Model):
     metric = GenericForeignKey()
     content_type = models.ForeignKey(
@@ -273,8 +260,6 @@ class Datum(models.Model):
     object_id = models.PositiveIntegerField()
     timestamp = models.DateTimeField(default=datetime.datetime.now)
     measurement = models.BigIntegerField()
-
-    objects = DatumQuerySet.as_manager()
 
     class Meta:
         ordering = ["-timestamp"]

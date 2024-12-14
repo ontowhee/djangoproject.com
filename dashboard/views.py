@@ -7,7 +7,7 @@ from django.http.response import Http404, JsonResponse
 from django.shortcuts import render
 from django.utils.translation import gettext as _
 
-from .models import Metric
+from .models import Datum, Metric
 from .utils import generation_key
 
 
@@ -17,19 +17,14 @@ def index(request):
 
     data = cache.get(key, version=generation)
     if data is None:
-        data = [m for MC in Metric.__subclasses__() for m in MC.objects.for_dashboard()]
-        data.sort(key=operator.attrgetter("display_position"))
+        data = Datum.objects.for_dashboard()
+        data = sorted(data, key=operator.attrgetter("metric.display_position"))
         cache.set(key, data, 60 * 60, version=generation)
 
     # Due to the way `with_latest()` is implemented, the timestamps we get back
     # are actually strings (because JSON) so they need converting to proper
     # datetime objects first.
-    timestamps = [
-        datetime.datetime.fromisoformat(m.latest["timestamp"])
-        for m in data
-        if m.latest is not None
-    ]
-    last_updated = max(timestamps, default=None)
+    last_updated = max([datum.timestamp for datum in data], default=None)
 
     return render(
         request, "dashboard/index.html", {"data": data, "last_updated": last_updated}

@@ -3,18 +3,18 @@
 
 {% block content %}
   <div class="dashboard-index">
-    {% for metric in data %}
-      {% ifchanged metric.category %}
-        {% if metric.category %}<h2>{{ metric.category }}</h2>{% endif %}
+    {% for datum in data %}
+      {% ifchanged datum.metric.category %}
+        {% if datum.metric.category %}<h2>{{ datum.metric.category }}</h2>{% endif %}
       {% endifchanged %}
-      <div class="metric{% if metric.show_sparkline %} has-sparkline{% endif %}">
-        <h3><a href="{{ metric.link }}">{{ metric.name }}</a></h3>
+      <div class="metric{% if datum.metric.show_sparkline %} has-sparkline{% endif %}">
+        <h3><a href="{{ datum.metric.link }}">{{ datum.metric.name }}</a></h3>
         <div class="value" >
-          <a href="{{ metric.get_absolute_url }}">{{ metric.latest.measurement }}{% if metric.unit == "%" %}%{% endif %}</a>
+          <a href="{{ datum.metric.get_absolute_url }}">{{ datum.measurement }}{% if datum.metric.unit == "%" %}%{% endif %}</a>
           <div class="timestamp">&nbsp;</div>
         </div>
-        {% if metric.show_sparkline %}
-          <div class="sparkline" id="spark{{ forloop.counter0 }}" data-path="{% url "metric-list" host "dashboard" %}" data-metric="{{ metric.slug }}"></div>
+        {% if datum.metric.show_sparkline %}
+          <div class="sparkline" id="spark{{ forloop.counter0 }}" data-path="{% url "metric-list" host "dashboard" %}" data-metric="{{ datum.metric.slug }}"></div>
         {% endif %}
       </div>
     {% endfor %}

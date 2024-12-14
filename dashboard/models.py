@@ -284,6 +284,15 @@ class JenkinsFailuresMetric(Metric):
         return self.urljoin(self.jenkins_root_url, "job", self.build_name)
 
 
+class DatumQuerySet(models.QuerySet):
+    def for_dashboard(self):
+        return (
+            self.distinct("content_type_id", "object_id")
+            .order_by("content_type_id", "object_id", "-timestamp")
+            .prefetch_related("metric", "content_type", "metric__category")
+        )
+
+
 class Datum(models.Model):
     metric = GenericForeignKey()
     content_type = models.ForeignKey(
@@ -292,6 +301,8 @@ class Datum(models.Model):
     object_id = models.PositiveIntegerField()
     timestamp = models.DateTimeField(default=datetime.datetime.now)
     measurement = models.BigIntegerField()
+
+    objects = DatumQuerySet.as_manager()
 
     class Meta:
         ordering = ["-timestamp"]

@@ -17,6 +17,7 @@ from .models import (
     METRIC_PERIOD_DAILY,
     METRIC_PERIOD_WEEKLY,
     Category,
+    Datum,
     GithubItemCountMetric,
     GitHubSearchCountMetric,
     Metric,
@@ -116,6 +117,10 @@ class AbstractMetricTestCase(TestCase):
                 self.assertTrue(row.category.name)
                 self.assertTrue(row.latest is None or row.latest["timestamp"])
                 self.assertTrue(row.latest is None or row.latest["measurement"])
+
+    def test_datum_for_dashboard(self):
+        with self.assertNumQueries(4):
+            list(Datum.objects.filter().for_dashboard())
 
 
 class MetricMixin:

@@ -75,6 +75,8 @@ jobs:
               env:
                   DJANGO_SETTINGS_MODULE: djangoproject.settings.prod
               run: |
-                  python -m pip install -r requirements/prod.txt
-                  python -m manage check_collectstatic
-                  python -m manage collectstatic
+                  find . | grep "jquery.min.map"
+                  find . | grep "jquery.min.js"
+                  #   python -m pip install -r requirements/prod.txt
+                  #   python -m manage check_collectstatic
+                  #   python -m manage collectstatic

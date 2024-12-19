@@ -12,6 +12,7 @@ ALLOWED_HOSTS = [
 LOCALE_MIDDLEWARE_EXCLUDED_HOSTS = [f"docs.{DOMAIN_NAME}"]
 
 DEBUG = os.getenv("DJANGO_DEBUG", "false").lower() == "true"
+print(f"{DEBUG=}")
 THUMBNAIL_DEBUG = DEBUG
 
 CACHES = {
